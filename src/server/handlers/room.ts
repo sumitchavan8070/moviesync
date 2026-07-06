@@ -3,6 +3,7 @@ import { getClientIp, rateLimit } from '../api/rate-limit';
 import { apiError, json } from '../api/response';
 import { authService } from '../services/auth.service';
 import { roomService } from '../services/room.service';
+import { isPersistentStoreEnabled } from '../store/room-store';
 import { normalizeRoomId } from '../utils/index';
 
 const createRoomSchema = z.object({
@@ -15,7 +16,12 @@ const joinRoomSchema = z.object({
 });
 
 export function handleHealthCheck(): Response {
-  return json({ status: 'ok', timestamp: Date.now(), service: 'mauknh.diaries' });
+  return json({
+    status: 'ok',
+    timestamp: Date.now(),
+    service: 'mauknh.diaries',
+    persistentStore: isPersistentStoreEnabled(),
+  });
 }
 
 export async function handleCreateRoom(request: Request): Promise<Response> {
@@ -36,7 +42,7 @@ export async function handleCreateRoom(request: Request): Promise<Response> {
     return apiError('Invalid request', 400, parsed.error.flatten());
   }
 
-  const { room, hostToken, guestToken } = roomService.createRoom(parsed.data.hostName);
+  const { room, hostToken, guestToken } = await roomService.createRoom(parsed.data.hostName);
 
   return json(
     {
@@ -50,9 +56,9 @@ export async function handleCreateRoom(request: Request): Promise<Response> {
   );
 }
 
-export function handleGetRoom(roomId: string): Response {
+export async function handleGetRoom(roomId: string): Promise<Response> {
   const normalizedRoomId = roomId.trim().toLowerCase();
-  const room = roomService.getRoom(normalizedRoomId);
+  const room = await roomService.getRoom(normalizedRoomId);
 
   if (!room) {
     return apiError('Room not found or expired', 404);
@@ -73,7 +79,7 @@ export function handleGetRoom(roomId: string): Response {
 }
 
 export async function handleJoinRoom(roomId: string, request: Request): Promise<Response> {
-  const normalizedRoomId = roomId.trim().toLowerCase();
+  const normalizedRoomId = normalizeRoomId(roomId);
 
   if (!normalizedRoomId || normalizedRoomId.length < 4) {
     return apiError('Invalid room ID', 400);
@@ -99,17 +105,23 @@ export async function handleJoinRoom(roomId: string, request: Request): Promise<
     }
   }
 
-  const result = roomService.joinRoom(normalizedRoomId, parsed.data.name.trim(), participantId);
+  const result = await roomService.joinRoom(
+    normalizedRoomId,
+    parsed.data.name.trim(),
+    participantId,
+  );
 
   if (!result) {
-    const room = roomService.getRoom(normalizedRoomId);
+    const room = await roomService.getRoom(normalizedRoomId);
     if (room?.locked) {
       return apiError('Room is locked', 403);
     }
-    return apiError(
-      'Room not found. Ask the host to confirm the room ID and that their session is still open.',
-      404,
-    );
+
+    const hint = isPersistentStoreEnabled()
+      ? 'Ask the host to confirm the room ID and that their session is still open.'
+      : 'Room not found. On Vercel, add Upstash Redis (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN) so rooms persist across requests.';
+
+    return apiError(hint, 404);
   }
 
   return json({

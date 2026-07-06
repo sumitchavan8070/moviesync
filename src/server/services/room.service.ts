@@ -1,4 +1,9 @@
 import { config } from '../config/index';
+import {
+  deleteRoomFromStore,
+  loadRoomFromStore,
+  saveRoomToStore,
+} from '../store/room-store';
 import type {
   ChatMessage,
   Participant,
@@ -20,11 +25,11 @@ import { authService } from './auth.service';
 export class RoomService {
   private rooms = new Map<string, Room>();
 
-  createRoom(hostName: string): {
+  async createRoom(hostName: string): Promise<{
     room: Room;
     hostToken: string;
     guestToken: string;
-  } {
+  }> {
     const roomId = createRoomId();
     const hostParticipantId = createSecureToken();
     const hostToken = authService.signHostToken(roomId, hostParticipantId);
@@ -60,22 +65,38 @@ export class RoomService {
     };
 
     this.rooms.set(roomId, room);
+    await this.persistRoom(room);
     return { room, hostToken, guestToken };
   }
 
-  getRoom(roomId: string): Room | undefined {
+  async getRoom(roomId: string): Promise<Room | undefined> {
     const id = normalizeRoomId(roomId);
-    const room = this.rooms.get(id);
+    let room = this.rooms.get(id);
+
+    if (!room) {
+      room = await loadRoomFromStore(id);
+      if (room) this.rooms.set(id, room);
+    }
+
     if (!room) return undefined;
+
     if (Date.now() > room.expiresAt) {
-      this.rooms.delete(roomId);
+      await this.deleteRoom(id);
       return undefined;
     }
+
     return room;
   }
 
-  deleteRoom(roomId: string): void {
-    this.rooms.delete(roomId);
+  async deleteRoom(roomId: string): Promise<void> {
+    const id = normalizeRoomId(roomId);
+    this.rooms.delete(id);
+    await deleteRoomFromStore(id);
+  }
+
+  async persistRoom(room: Room): Promise<void> {
+    this.rooms.set(room.id, room);
+    await saveRoomToStore(room);
   }
 
   toPublicInfo(room: Room): RoomPublicInfo {
@@ -92,13 +113,13 @@ export class RoomService {
     };
   }
 
-  joinRoom(
+  async joinRoom(
     roomId: string,
     name: string,
     participantId?: string,
-  ): { room: Room; participant: Participant; guestToken: string } | null {
+  ): Promise<{ room: Room; participant: Participant; guestToken: string } | null> {
     const normalizedRoomId = normalizeRoomId(roomId);
-    const room = this.getRoom(normalizedRoomId);
+    const room = await this.getRoom(normalizedRoomId);
     if (!room) return null;
     if (room.locked) return null;
 
@@ -130,6 +151,7 @@ export class RoomService {
 
     room.participants.set(newParticipantId, participant);
     const guestToken = authService.signGuestToken(normalizedRoomId, newParticipantId);
+    await this.persistRoom(room);
     return { room, participant, guestToken };
   }
 
@@ -192,11 +214,7 @@ export class RoomService {
     return room.playback;
   }
 
-  addChatMessage(
-    room: Room,
-    participant: Participant,
-    content: string,
-  ): ChatMessage {
+  addChatMessage(room: Room, participant: Participant, content: string): ChatMessage {
     const message: ChatMessage = {
       id: createMessageId(),
       participantId: participant.id,
@@ -228,13 +246,13 @@ export class RoomService {
     return Array.from(room.participants.values());
   }
 
-  /** Cleanup expired rooms periodically */
   purgeExpired(): number {
     const now = Date.now();
     let count = 0;
     for (const [id, room] of this.rooms) {
       if (now > room.expiresAt) {
         this.rooms.delete(id);
+        void deleteRoomFromStore(id);
         count++;
       }
     }
@@ -247,5 +265,6 @@ const globalForRoom = globalThis as unknown as { roomService?: RoomService };
 export const roomService = globalForRoom.roomService ?? new RoomService();
 globalForRoom.roomService = roomService;
 
-// Purge expired rooms every hour
-setInterval(() => roomService.purgeExpired(), 3600_000);
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => roomService.purgeExpired(), 3600_000);
+}

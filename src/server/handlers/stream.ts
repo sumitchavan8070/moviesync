@@ -7,17 +7,21 @@ import { parseRangeHeader, normalizeRoomId } from '../utils/index';
 
 const MAX_CHUNK_BYTES = 512 * 1024;
 
-export function handleStreamMetadata(roomId: string, request: Request): Response {
+export function handleStreamMetadata(roomId: string, request: Request): Promise<Response> {
+  return handleStreamMetadataAsync(roomId, request);
+}
+
+async function handleStreamMetadataAsync(roomId: string, request: Request): Promise<Response> {
   const id = normalizeRoomId(roomId);
   const ip = getClientIp(request);
   if (!rateLimit(`stream:${ip}`, 2000, 60_000)) {
     return apiError('Stream rate limit exceeded', 429);
   }
 
-  const auth = authenticateRoomToken(request);
+  const auth = await authenticateRoomToken(request);
   if (auth instanceof Response) return auth;
 
-  const room = roomService.getRoom(id);
+  const room = await roomService.getRoom(id);
   if (!room) {
     return apiError('Room not found', 404);
   }
@@ -39,10 +43,10 @@ export async function handleStreamVideo(roomId: string, request: Request): Promi
     return apiError('Stream rate limit exceeded', 429);
   }
 
-  const auth = authenticateRoomToken(request);
+  const auth = await authenticateRoomToken(request);
   if (auth instanceof Response) return auth;
 
-  const room = roomService.getRoom(id);
+  const room = await roomService.getRoom(id);
   if (!room) {
     return apiError('Room not found', 404);
   }

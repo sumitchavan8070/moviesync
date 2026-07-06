@@ -4,7 +4,7 @@ import type { TokenPayload } from '../types/index';
 import { normalizeRoomId } from '../utils/index';
 import { apiError } from './response';
 
-export function authenticateRoomToken(request: Request): TokenPayload | Response {
+export async function authenticateRoomToken(request: Request): Promise<TokenPayload | Response> {
   const authHeader = request.headers.get('authorization');
   const url = new URL(request.url);
   const queryToken = url.searchParams.get('token');
@@ -21,7 +21,7 @@ export function authenticateRoomToken(request: Request): TokenPayload | Response
     return apiError('Invalid or expired token', 401);
   }
 
-  const room = roomService.getRoom(normalizeRoomId(payload.roomId));
+  const room = await roomService.getRoom(normalizeRoomId(payload.roomId));
   if (!room) {
     return apiError('Room not found or expired', 404);
   }

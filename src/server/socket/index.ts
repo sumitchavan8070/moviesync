@@ -38,62 +38,75 @@ export function setupSocketIO(httpServer: HttpServer): Server {
 
   // Wire stream relay to host sockets
   streamRelayService.on('chunk-request', ({ requestId, roomId, start, end }) => {
-    const room = roomService.getRoom(roomId);
-    if (!room?.hostSocketId) {
-      streamRelayService.rejectChunk(requestId, 'Host offline');
-      return;
-    }
-    io.to(room.hostSocketId).emit('stream-chunk-request', { requestId, roomId, start, end });
+    void (async () => {
+      const room = await roomService.getRoom(roomId);
+      if (!room?.hostSocketId) {
+        streamRelayService.rejectChunk(requestId, 'Host offline');
+        return;
+      }
+      io.to(room.hostSocketId).emit('stream-chunk-request', { requestId, roomId, start, end });
+    })();
   });
 
-  io.use((socket: AuthenticatedSocket, next) => {
-    const token = socket.handshake.auth?.token as string | undefined;
-    if (!token) {
-      next(new Error('Authentication required'));
-      return;
-    }
+  io.use(async (socket: AuthenticatedSocket, next) => {
+    try {
+      const token = socket.handshake.auth?.token as string | undefined;
+      if (!token) {
+        next(new Error('Authentication required'));
+        return;
+      }
 
-    const payload = authService.verifyRoomToken(token);
-    if (!payload) {
-      next(new Error('Invalid token'));
-      return;
-    }
+      const payload = authService.verifyRoomToken(token);
+      if (!payload) {
+        next(new Error('Invalid token'));
+        return;
+      }
 
-    const room = roomService.getRoom(normalizeRoomId(payload.roomId));
-    if (!room) {
-      next(new Error('Room not found'));
-      return;
-    }
+      const room = await roomService.getRoom(normalizeRoomId(payload.roomId));
+      if (!room) {
+        next(new Error('Room not found'));
+        return;
+      }
 
-    if (room.removedParticipantIds.has(payload.participantId)) {
-      next(new Error('Removed from room'));
-      return;
-    }
+      if (room.removedParticipantIds.has(payload.participantId)) {
+        next(new Error('Removed from room'));
+        return;
+      }
 
-    socket.roomId = normalizeRoomId(payload.roomId);
-    socket.participantId = payload.participantId;
-    socket.isHost = payload.isHost;
-    next();
+      socket.roomId = normalizeRoomId(payload.roomId);
+      socket.participantId = payload.participantId;
+      socket.isHost = payload.isHost;
+      next();
+    } catch (err) {
+      next(err instanceof Error ? err : new Error('Authentication failed'));
+    }
   });
 
   io.on('connection', (socket: AuthenticatedSocket) => {
-    const roomId = socket.roomId!;
-    const participantId = socket.participantId!;
-    const isHost = socket.isHost!;
+    void (async () => {
+      const roomId = socket.roomId!;
+      const participantId = socket.participantId!;
+      const isHost = socket.isHost!;
 
-    const room = roomService.getRoom(roomId);
-    if (!room) {
-      socket.disconnect(true);
-      return;
-    }
+      const room = await roomService.getRoom(roomId);
+      if (!room) {
+        socket.disconnect(true);
+        return;
+      }
 
-    const participant = roomService.bindSocket(room, participantId, socket.id);
-    if (!participant) {
-      socket.disconnect(true);
-      return;
-    }
+      const participant = roomService.bindSocket(room, participantId, socket.id);
+      if (!participant) {
+        socket.disconnect(true);
+        return;
+      }
 
-    socket.join(roomId);
+      await roomService.persistRoom(room);
+
+      const touch = () => {
+        void roomService.persistRoom(room);
+      };
+
+      socket.join(roomId);
 
     // Notify others of join (skip if reconnecting with same name)
     socket.to(roomId).emit('user-joined', {
@@ -146,6 +159,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
       };
 
       roomService.setStreamMetadata(room, enriched);
+      touch();
       io.to(roomId).emit('stream-started', {
         metadata: enriched,
         playback: room.playback,
@@ -156,6 +170,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
       if (!isHost) return;
       streamRelayService.cancelAllForRoom(roomId);
       roomService.setStreamActive(room, false);
+      touch();
       io.to(roomId).emit('stream-stopped');
     });
 
@@ -185,12 +200,14 @@ export function setupSocketIO(httpServer: HttpServer): Server {
     socket.on('lock-room', () => {
       if (!isHost) return;
       roomService.setLocked(room, true);
+      touch();
       io.to(roomId).emit('room-locked');
     });
 
     socket.on('unlock-room', () => {
       if (!isHost) return;
       roomService.setLocked(room, false);
+      touch();
       io.to(roomId).emit('room-unlocked');
     });
 
@@ -198,6 +215,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
       if (!isHost) return;
       const removed = roomService.removeParticipant(room, targetParticipantId);
       if (!removed) return;
+      touch();
 
       const targetSocketId = removed.socketId;
       if (targetSocketId) {
@@ -211,11 +229,11 @@ export function setupSocketIO(httpServer: HttpServer): Server {
       });
     });
 
-    socket.on('end-session', () => {
+    socket.on('end-session', async () => {
       if (!isHost) return;
       streamRelayService.cancelAllForRoom(roomId);
       io.to(roomId).emit('host-ended');
-      roomService.deleteRoom(roomId);
+      await roomService.deleteRoom(roomId);
       io.in(roomId).disconnectSockets(true);
     });
 
@@ -311,6 +329,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
       if (!content) return;
 
       const message = roomService.addChatMessage(room, participant, content);
+      touch();
       io.to(roomId).emit('chat-message', message);
     });
 
@@ -335,6 +354,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
     socket.on('disconnect', () => {
       const disconnected = roomService.unbindSocket(room, socket.id);
       if (!disconnected) return;
+      touch();
 
       if (disconnected.isHost) {
         streamRelayService.cancelAllForRoom(roomId);
@@ -350,6 +370,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
     socket.on('leave-room', () => {
       socket.disconnect(true);
     });
+    })();
   });
 
   return io;
