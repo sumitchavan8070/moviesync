@@ -71,7 +71,7 @@ export function sanitizeChatContent(content: string): string {
   return content.trim().slice(0, 2000);
 }
 
-export function defaultPlaybackState(): import('../types/index.js').PlaybackState {
+export function defaultPlaybackState(): import('../types/index').PlaybackState {
   return {
     currentTime: 0,
     paused: true,

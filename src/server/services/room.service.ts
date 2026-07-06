@@ -1,4 +1,4 @@
-import { config } from '../config/index.js';
+import { config } from '../config/index';
 import type {
   ChatMessage,
   Participant,
@@ -6,15 +6,15 @@ import type {
   Room,
   RoomPublicInfo,
   StreamMetadata,
-} from '../types/index.js';
+} from '../types/index';
 import {
   createMessageId,
   createRoomId,
   createSecureToken,
   defaultPlaybackState,
   sanitizeDisplayName,
-} from '../utils/index.js';
-import { authService } from './auth.service.js';
+} from '../utils/index';
+import { authService } from './auth.service';
 
 export class RoomService {
   private rooms = new Map<string, Room>();
@@ -239,7 +239,10 @@ export class RoomService {
   }
 }
 
-export const roomService = new RoomService();
+const globalForRoom = globalThis as unknown as { roomService?: RoomService };
+
+export const roomService = globalForRoom.roomService ?? new RoomService();
+globalForRoom.roomService = roomService;
 
 // Purge expired rooms every hour
 setInterval(() => roomService.purgeExpired(), 3600_000);

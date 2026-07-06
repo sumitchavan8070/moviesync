@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { config } from '../config/index.js';
-import type { TokenPayload } from '../types/index.js';
+import { config } from '../config/index';
+import type { TokenPayload } from '../types/index';
 
 export class AuthService {
   signRoomToken(payload: Omit<TokenPayload, 'exp'>, expiresInHours?: number): string {

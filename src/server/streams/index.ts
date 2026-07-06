@@ -8,4 +8,4 @@
  * @see StreamRelayService in services/stream-relay.service.ts
  * @see streamVideo in controllers/stream.controller.ts
  */
-export { streamRelayService } from '../services/stream-relay.service.js';
+export { streamRelayService } from '../services/stream-relay.service';

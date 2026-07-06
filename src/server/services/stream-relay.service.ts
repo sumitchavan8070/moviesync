@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
-import { config } from '../config/index.js';
-import { createRequestId } from '../utils/index.js';
+import { config } from '../config/index';
+import { createRequestId } from '../utils/index';
 
 interface PendingChunk {
   resolve: (buffer: Buffer) => void;

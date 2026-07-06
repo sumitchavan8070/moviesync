@@ -1,4 +1,4 @@
-# Production build for mauknh.diaries (Next.js + custom server)
+# Production build for mauknh.diaries (Next.js + Socket.IO custom server)
 
 FROM node:20-alpine AS build
 WORKDIR /app
@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY next.config.ts postcss.config.mjs tsconfig.json tsconfig.server.json next-env.d.ts ./
+COPY next.config.ts postcss.config.mjs tsconfig.json next-env.d.ts ./
 COPY app ./app
 COPY public ./public
 COPY src ./src
@@ -28,11 +28,11 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY --from=build /app/.next ./.next
-COPY --from=build /app/dist-server ./dist-server
 COPY --from=build /app/public ./public
 COPY --from=build /app/server.ts ./server.ts
 COPY --from=build /app/next.config.ts ./next.config.ts
-COPY --from=build /app/src/server ./src/server
+COPY --from=build /app/app ./app
+COPY --from=build /app/src ./src
 COPY ecosystem.config.cjs ./
 
 ENV NODE_ENV=production

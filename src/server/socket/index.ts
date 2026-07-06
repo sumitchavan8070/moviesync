@@ -1,9 +1,9 @@
 import type { Server as HttpServer } from 'http';
 import { Server, type Socket } from 'socket.io';
-import { config } from '../config/index.js';
-import { authService } from '../services/auth.service.js';
-import { roomService } from '../services/room.service.js';
-import { streamRelayService } from '../services/stream-relay.service.js';
+import { config } from '../config/index';
+import { authService } from '../services/auth.service';
+import { roomService } from '../services/room.service';
+import { streamRelayService } from '../services/stream-relay.service';
 import type {
   ChatMessagePayload,
   PlaybackRatePayload,
@@ -15,8 +15,8 @@ import type {
   SyncRequestPayload,
   SyncResponsePayload,
   TypingPayload,
-} from '../types/index.js';
-import { sanitizeChatContent } from '../utils/index.js';
+} from '../types/index';
+import { sanitizeChatContent } from '../utils/index';
 
 interface AuthenticatedSocket extends Socket {
   roomId?: string;

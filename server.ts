@@ -1,27 +1,21 @@
 import { createServer } from 'http';
 import { parse } from 'url';
-import express from 'express';
 import next from 'next';
-import { createApp } from './src/server/app.js';
-import { config } from './src/server/config/index.js';
-import { setupSocketIO } from './src/server/socket/index.js';
+import { config } from './src/server/config/index';
+import { setupSocketIO } from './src/server/socket/index';
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev, dir: '.' });
 const handle = nextApp.getRequestHandler();
-const apiApp = createApp();
 
 async function main() {
   await nextApp.prepare();
 
-  const app = express();
-  app.use(apiApp);
-  app.use((req, res) => {
+  const httpServer = createServer((req, res) => {
     const parsedUrl = parse(req.url!, true);
     void handle(req, res, parsedUrl);
   });
 
-  const httpServer = createServer(app);
   setupSocketIO(httpServer);
 
   httpServer.listen(config.port, config.host, () => {
