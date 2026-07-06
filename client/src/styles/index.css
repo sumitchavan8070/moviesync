@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-background: #09090b;
+  --color-surface: #18181b;
+  --color-surface-elevated: #27272a;
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-primary-muted: #6366f133;
+  --color-text: #fafafa;
+  --color-text-muted: #a1a1aa;
+  --color-border: #ffffff14;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --radius-xl: 24px;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply bg-background text-text font-sans min-h-screen;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, #6366f120, transparent),
+      radial-gradient(ellipse 60% 40% at 100% 100%, #6366f110, transparent);
+  }
+
+  ::selection {
+    @apply bg-primary/40 text-white;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-elevated rounded-full;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  .glass-strong {
+    @apply bg-white/8 backdrop-blur-2xl border border-white/15 shadow-2xl;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent;
+  }
+}
