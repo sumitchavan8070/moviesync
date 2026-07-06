@@ -1,6 +1,8 @@
+'use client';
+
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { useCopyToClipboard } from '@/hooks/useMediaQuery';
 import { getRoomUrl } from '@/utils';
 import { Button } from './ui/Button';
@@ -57,7 +59,7 @@ export function TopBar({
 }) {
   return (
     <header className="flex items-center justify-between gap-4 px-4 py-3">
-      <Link to="/" className="flex items-center gap-2 font-bold text-xl shrink-0">
+      <Link href="/" className="flex items-center gap-2 font-bold text-xl shrink-0">
         <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
           <span className="text-white text-sm">▶</span>
         </div>

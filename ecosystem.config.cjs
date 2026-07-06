@@ -2,7 +2,9 @@ module.exports = {
   apps: [
     {
       name: 'mauknh-diaries',
-      script: './dist-server/index.js',
+      script: 'server.ts',
+      interpreter: 'node',
+      interpreter_args: '--import tsx',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
@@ -10,11 +12,11 @@ module.exports = {
       max_memory_restart: '512M',
       env: {
         NODE_ENV: 'development',
-        PORT: 3001,
+        PORT: 3000,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 3001,
+        PORT: 3000,
       },
       error_file: './logs/err.log',
       out_file: './logs/out.log',

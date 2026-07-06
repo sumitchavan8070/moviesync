@@ -1,5 +1,7 @@
+'use client';
+
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Logo } from '@/components/common';
@@ -45,10 +47,10 @@ export function LandingPage() {
         <nav className="max-w-6xl mx-auto flex items-center justify-between mb-16">
           <Logo size="lg" />
           <div className="flex gap-3">
-            <Link to="/join">
+            <Link href="/join">
               <Button variant="ghost">Join Room</Button>
             </Link>
-            <Link to="/create">
+            <Link href="/create">
               <Button>Create Room</Button>
             </Link>
           </div>
@@ -70,10 +72,10 @@ export function LandingPage() {
               storage — real-time synced sessions from your device.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link to="/create">
+              <Link href="/create">
                 <Button size="lg">Start Streaming</Button>
               </Link>
-              <Link to="/join">
+              <Link href="/join">
                 <Button variant="secondary" size="lg">
                   Join a Room
                 </Button>
@@ -130,7 +132,7 @@ export function LandingPage() {
           <p className="text-text-muted mb-8">
             Pick a video, share the link, and start streaming in seconds.
           </p>
-          <Link to="/create">
+          <Link href="/create">
             <Button size="lg">Create Your Room</Button>
           </Link>
         </GlassCard>

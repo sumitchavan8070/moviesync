@@ -11,7 +11,8 @@ import routes from './routes/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export function createApp(): express.Application {
+export function createApp(options: { serveFrontend?: boolean } = {}): express.Application {
+  const { serveFrontend = false } = options;
   const app = express();
 
   app.set('trust proxy', 1);
@@ -43,8 +44,8 @@ export function createApp(): express.Application {
 
   app.use('/api', routes);
 
-  // Serve frontend in production (single-container deployment)
-  if (config.isProduction) {
+  // Serve static frontend when running API-only (Docker without Next custom server)
+  if (serveFrontend && config.isProduction) {
     const clientDist = path.resolve(__dirname, '../dist');
     app.use(express.static(clientDist));
     app.get(/^(?!\/api).*/, (_req, res) => {

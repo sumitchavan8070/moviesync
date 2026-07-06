@@ -1,6 +1,8 @@
+'use client';
+
 import { motion } from 'framer-motion';
+import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { FilePicker } from '@/components/FilePicker';
 import { GuestJoinPrompt } from '@/components/GuestJoinPrompt';
 import { GuestRoomView } from '@/components/GuestRoomView';
@@ -18,8 +20,9 @@ import { useUiStore } from '@/store/room.store';
 import { detectMediaType, getMimeType } from '@/utils';
 
 export function RoomPage() {
-  const { roomId } = useParams<{ roomId: string }>();
-  const navigate = useNavigate();
+  const params = useParams<{ roomId: string }>();
+  const roomId = params?.roomId;
+  const router = useRouter();
   const isMobile = useIsMobile();
 
   const isHost = useRoomStore((s) => s.isHost);
@@ -74,11 +77,11 @@ export function RoomPage() {
   const handleEndSession = useCallback(() => {
     socketService.endSession();
     reset();
-    navigate('/');
-  }, [reset, navigate]);
+    router.push('/');
+  }, [reset, router]);
 
   if (!roomId) {
-    navigate('/');
+    router.push('/');
     return null;
   }
 
@@ -92,7 +95,7 @@ export function RoomPage() {
 
   // Host without token
   if (isHostForRoom && !token) {
-    navigate('/create');
+    router.push('/create');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner message="Redirecting..." />
@@ -108,7 +111,7 @@ export function RoomPage() {
           icon="👋"
           title="Session Ended"
           description="The host has ended this session."
-          action={<Button onClick={() => navigate('/')}>Go Home</Button>}
+          action={<Button onClick={() => router.push('/')}>Go Home</Button>}
         />
       );
     }
@@ -118,7 +121,7 @@ export function RoomPage() {
           icon="🚫"
           title="Removed"
           description="You have been removed from this room by the host."
-          action={<Button onClick={() => navigate('/')}>Go Home</Button>}
+          action={<Button onClick={() => router.push('/')}>Go Home</Button>}
         />
       );
     }

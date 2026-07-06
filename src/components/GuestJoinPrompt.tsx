@@ -1,6 +1,8 @@
+'use client';
+
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Logo, LoadingSpinner } from '@/components/common';
 import { Button } from '@/components/ui/Button';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -11,7 +13,7 @@ import { generateGuestName } from '@/utils';
 
 /** Shown when a guest opens /room/:id without a session token */
 export function GuestJoinPrompt({ roomId }: { roomId: string }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const setIdentity = useRoomStore((s) => s.setIdentity);
   const reset = useRoomStore((s) => s.reset);
 
@@ -38,7 +40,7 @@ export function GuestJoinPrompt({ roomId }: { roomId: string }) {
       });
       useRoomStore.getState().setSessionStatus('waiting');
       useRoomStore.getState().setConnectionStatus('connecting');
-      navigate(`/room/${roomId}`, { replace: true });
+      router.replace(`/room/${roomId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to join room');
     } finally {

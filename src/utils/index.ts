@@ -1,12 +1,12 @@
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-/** Use same-origin in dev so Vite proxies /api and /socket.io (port 5173 only — no firewall issues) */
+/** Use same-origin when empty so Next custom server proxies /api and /socket.io */
 export function getBackendUrl(): string {
   return API_URL;
 }
 
 export function getSocketUrl(): string | undefined {
-  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+  if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
   return undefined;
 }
 
@@ -22,6 +22,7 @@ export function getStreamUrl(roomId: string, token: string): string {
 }
 
 export function getRoomUrl(roomId: string): string {
+  if (typeof window === 'undefined') return `/room/${roomId}`;
   return `${window.location.origin}/room/${roomId}`;
 }
 

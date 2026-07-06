@@ -1,8 +1,10 @@
+'use client';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { Logo, LoadingSpinner } from '@/components/common';
 import { Button } from '@/components/ui/Button';
@@ -10,16 +12,21 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { Input } from '@/components/ui/Input';
 import { api, ApiError } from '@/services/api.service';
 import { useRoomStore } from '@/store/room.store';
+import { generateGuestName } from '@/utils';
 
 const schema = z.object({
-  hostName: z.string().min(1, 'Name is required').max(32),
+  roomId: z.string().min(4, 'Room ID is required').max(12),
+  guestName: z.string().min(1, 'Name is required').max(32),
 });
 
 type FormData = z.infer<typeof schema>;
 
-export function CreateRoomPage() {
-  const navigate = useNavigate();
+export function JoinRoomPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const setIdentity = useRoomStore((s) => s.setIdentity);
+  const storedToken = useRoomStore((s) => s.token);
+  const storedParticipantId = useRoomStore((s) => s.participantId);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,24 +36,31 @@ export function CreateRoomPage() {
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { hostName: '' },
+    defaultValues: {
+      roomId: searchParams?.get('room') || '',
+      guestName: generateGuestName(),
+    },
   });
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.createRoom(data.hostName);
+      const res = await api.joinRoom(
+        data.roomId,
+        data.guestName,
+        storedParticipantId ? storedToken || undefined : undefined,
+      );
       setIdentity({
-        roomId: res.roomId,
-        token: res.hostToken,
+        roomId: data.roomId,
+        token: res.guestToken,
         participantId: res.participantId,
-        isHost: true,
-        displayName: data.hostName,
+        isHost: false,
+        displayName: data.guestName,
       });
-      navigate(`/room/${res.roomId}`);
+      router.push(`/room/${data.roomId}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create room');
+      setError(err instanceof ApiError ? err.message : 'Failed to join room');
     } finally {
       setLoading(false);
     }
@@ -61,24 +75,30 @@ export function CreateRoomPage() {
       >
         <div className="text-center">
           <Logo />
-          <h1 className="text-2xl font-bold mt-6 mb-2">Create a Room</h1>
-          <p className="text-text-muted text-sm">Start streaming your local video to guests</p>
+          <h1 className="text-2xl font-bold mt-6 mb-2">Join a Room</h1>
+          <p className="text-text-muted text-sm">Enter the room ID from your host</p>
         </div>
 
         <GlassCard className="p-6">
           {loading ? (
-            <LoadingSpinner message="Creating room..." />
+            <LoadingSpinner message="Joining room..." />
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Input
+                label="Room ID"
+                placeholder="e.g. 9GhdA81P"
+                error={errors.roomId?.message}
+                {...register('roomId')}
+              />
+              <Input
                 label="Your Name"
                 placeholder="Enter your display name"
-                error={errors.hostName?.message}
-                {...register('hostName')}
+                error={errors.guestName?.message}
+                {...register('guestName')}
               />
               {error && <p className="text-sm text-danger">{error}</p>}
               <Button type="submit" className="w-full" loading={loading}>
-                Create Room
+                Join Room
               </Button>
             </form>
           )}

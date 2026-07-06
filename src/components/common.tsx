@@ -1,10 +1,12 @@
+'use client';
+
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const sizes = { sm: 'text-lg', md: 'text-xl', lg: 'text-2xl' };
   return (
-    <Link to="/" className={`flex items-center gap-2 font-bold ${sizes[size]}`}>
+    <Link href="/" className={`flex items-center gap-2 font-bold ${sizes[size]}`}>
       <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
         <span className="text-white text-sm">▶</span>
       </div>

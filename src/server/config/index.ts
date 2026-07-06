@@ -21,10 +21,10 @@ function envInt(key: string, fallback: number): number {
 
 export const config = {
   nodeEnv: env('NODE_ENV', 'development'),
-  port: envInt('PORT', 3001),
+  port: envInt('PORT', 3000),
   host: env('HOST', '0.0.0.0'),
-  clientUrl: env('CLIENT_URL', 'http://localhost:5173'),
-  corsOrigins: env('CORS_ORIGINS', 'http://localhost:5173')
+  clientUrl: env('CLIENT_URL', 'http://localhost:3000'),
+  corsOrigins: env('CORS_ORIGINS', 'http://localhost:3000')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean),
