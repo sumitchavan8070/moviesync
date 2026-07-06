@@ -17,13 +17,15 @@ import { useSocketConnection } from '@/hooks/useSocketConnection';
 import { socketService } from '@/services/socket.service';
 import { useRoomStore } from '@/store/room.store';
 import { useUiStore } from '@/store/room.store';
-import { detectMediaType, getMimeType } from '@/utils';
+import { detectMediaType, getMimeType, normalizeRoomId } from '@/utils';
+import { useStoreHydration } from '@/hooks/useStoreHydration';
 
 export function RoomPage() {
   const params = useParams<{ roomId: string }>();
-  const roomId = params?.roomId;
+  const roomId = params?.roomId ? normalizeRoomId(params.roomId) : undefined;
   const router = useRouter();
   const isMobile = useIsMobile();
+  const hydrated = useStoreHydration();
 
   const isHost = useRoomStore((s) => s.isHost);
   const token = useRoomStore((s) => s.token);
@@ -85,9 +87,19 @@ export function RoomPage() {
     return null;
   }
 
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner message="Loading session..." />
+      </div>
+    );
+  }
+
   // Must be a valid session for THIS room
-  const isHostForRoom = isHost && token && storedRoomId === roomId;
-  const isGuestForRoom = !isHost && token && storedRoomId === roomId;
+  const isHostForRoom =
+    isHost && token && storedRoomId && normalizeRoomId(storedRoomId) === roomId;
+  const isGuestForRoom =
+    !isHost && token && storedRoomId && normalizeRoomId(storedRoomId) === roomId;
 
   if (!isHostForRoom && !isGuestForRoom) {
     return <GuestJoinPrompt roomId={roomId} />;

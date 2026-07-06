@@ -1,12 +1,18 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-/** Use same-origin when empty so Next custom server proxies /api and /socket.io */
+/** Trim and lowercase so pasted room links always match */
+export function normalizeRoomId(roomId: string): string {
+  return roomId.trim().toLowerCase();
+}
+
+/** Use same-origin when empty so Next custom server serves /api and /socket.io */
 export function getBackendUrl(): string {
   return API_URL;
 }
 
 export function getSocketUrl(): string | undefined {
   if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
+  if (typeof window !== 'undefined') return window.location.origin;
   return undefined;
 }
 
@@ -16,8 +22,9 @@ export function getApiUrl(path: string): string {
 }
 
 export function getStreamUrl(roomId: string, token: string): string {
+  const id = normalizeRoomId(roomId);
   const base = getBackendUrl();
-  const path = `/api/stream/${roomId}?token=${encodeURIComponent(token)}&_=${Date.now()}`;
+  const path = `/api/stream/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}&_=${Date.now()}`;
   return base ? `${base}${path}` : path;
 }
 

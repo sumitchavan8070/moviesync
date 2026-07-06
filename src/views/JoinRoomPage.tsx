@@ -12,11 +12,11 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { Input } from '@/components/ui/Input';
 import { api, ApiError } from '@/services/api.service';
 import { useRoomStore } from '@/store/room.store';
-import { generateGuestName } from '@/utils';
+import { generateGuestName, normalizeRoomId } from '@/utils';
 
 const schema = z.object({
-  roomId: z.string().min(4, 'Room ID is required').max(12),
-  guestName: z.string().min(1, 'Name is required').max(32),
+  roomId: z.string().trim().min(4, 'Room ID is required').max(12),
+  guestName: z.string().trim().min(1, 'Name is required').max(32),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -25,8 +25,10 @@ export function JoinRoomPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setIdentity = useRoomStore((s) => s.setIdentity);
+  const reset = useRoomStore((s) => s.reset);
   const storedToken = useRoomStore((s) => s.token);
-  const storedParticipantId = useRoomStore((s) => s.participantId);
+  const storedRoomId = useRoomStore((s) => s.roomId);
+  const storedIsHost = useRoomStore((s) => s.isHost);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +39,7 @@ export function JoinRoomPage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      roomId: searchParams?.get('room') || '',
+      roomId: searchParams?.get('room')?.trim() || '',
       guestName: generateGuestName(),
     },
   });
@@ -45,20 +47,34 @@ export function JoinRoomPage() {
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError('');
+
+    const roomId = normalizeRoomId(data.roomId);
+    const guestName = data.guestName.trim();
+
     try {
-      const res = await api.joinRoom(
-        data.roomId,
-        data.guestName,
-        storedParticipantId ? storedToken || undefined : undefined,
-      );
+      if (storedIsHost || (storedRoomId && normalizeRoomId(storedRoomId) !== roomId)) {
+        reset();
+      }
+
+      const rejoinToken =
+        !storedIsHost &&
+        storedToken &&
+        storedRoomId &&
+        normalizeRoomId(storedRoomId) === roomId
+          ? storedToken
+          : undefined;
+
+      const res = await api.joinRoom(roomId, guestName, rejoinToken);
+
       setIdentity({
-        roomId: data.roomId,
+        roomId,
         token: res.guestToken,
         participantId: res.participantId,
         isHost: false,
-        displayName: data.guestName,
+        displayName: guestName,
       });
-      router.push(`/room/${data.roomId}`);
+
+      router.push(`/room/${roomId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to join room');
     } finally {
@@ -86,7 +102,9 @@ export function JoinRoomPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Input
                 label="Room ID"
-                placeholder="e.g. 9GhdA81P"
+                placeholder="e.g. 9ghda81p"
+                autoComplete="off"
+                spellCheck={false}
                 error={errors.roomId?.message}
                 {...register('roomId')}
               />

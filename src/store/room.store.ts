@@ -106,7 +106,16 @@ export const useRoomStore = create<RoomStore>()(
       isLocked: false,
       showSettings: false,
 
-      setIdentity: (data) => set(data),
+      setIdentity: (data) =>
+        set({
+          roomId: data.roomId.trim().toLowerCase(),
+          token: data.token,
+          participantId: data.participantId,
+          isHost: data.isHost,
+          displayName: data.displayName.trim(),
+          connectionStatus: 'connecting',
+          sessionStatus: data.isHost ? 'idle' : 'waiting',
+        }),
 
       setRoom: (room) => set({ room, isLocked: room.locked }),
 

@@ -3,13 +3,14 @@ import { getClientIp, rateLimit } from '../api/rate-limit';
 import { apiError, json } from '../api/response';
 import { authService } from '../services/auth.service';
 import { roomService } from '../services/room.service';
+import { normalizeRoomId } from '../utils/index';
 
 const createRoomSchema = z.object({
   hostName: z.string().min(1).max(32),
 });
 
 const joinRoomSchema = z.object({
-  name: z.string().min(1).max(32),
+  name: z.string().trim().min(1, 'Name is required').max(32),
   token: z.string().optional(),
 });
 
@@ -50,7 +51,8 @@ export async function handleCreateRoom(request: Request): Promise<Response> {
 }
 
 export function handleGetRoom(roomId: string): Response {
-  const room = roomService.getRoom(roomId);
+  const normalizedRoomId = roomId.trim().toLowerCase();
+  const room = roomService.getRoom(normalizedRoomId);
 
   if (!room) {
     return apiError('Room not found or expired', 404);
@@ -71,6 +73,12 @@ export function handleGetRoom(roomId: string): Response {
 }
 
 export async function handleJoinRoom(roomId: string, request: Request): Promise<Response> {
+  const normalizedRoomId = roomId.trim().toLowerCase();
+
+  if (!normalizedRoomId || normalizedRoomId.length < 4) {
+    return apiError('Invalid room ID', 400);
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -86,19 +94,22 @@ export async function handleJoinRoom(roomId: string, request: Request): Promise<
   let participantId: string | undefined;
   if (parsed.data.token) {
     const payload = authService.verifyRoomToken(parsed.data.token);
-    if (payload && payload.roomId === roomId) {
+    if (payload && normalizeRoomId(payload.roomId) === normalizedRoomId) {
       participantId = payload.participantId;
     }
   }
 
-  const result = roomService.joinRoom(roomId, parsed.data.name, participantId);
+  const result = roomService.joinRoom(normalizedRoomId, parsed.data.name.trim(), participantId);
 
   if (!result) {
-    const room = roomService.getRoom(roomId);
+    const room = roomService.getRoom(normalizedRoomId);
     if (room?.locked) {
       return apiError('Room is locked', 403);
     }
-    return apiError('Room not found or expired', 404);
+    return apiError(
+      'Room not found. Ask the host to confirm the room ID and that their session is still open.',
+      404,
+    );
   }
 
   return json({

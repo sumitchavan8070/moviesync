@@ -9,7 +9,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { Input } from '@/components/ui/Input';
 import { api, ApiError } from '@/services/api.service';
 import { useRoomStore } from '@/store/room.store';
-import { generateGuestName } from '@/utils';
+import { generateGuestName, normalizeRoomId } from '@/utils';
 
 /** Shown when a guest opens /room/:id without a session token */
 export function GuestJoinPrompt({ roomId }: { roomId: string }) {
@@ -17,30 +17,39 @@ export function GuestJoinPrompt({ roomId }: { roomId: string }) {
   const setIdentity = useRoomStore((s) => s.setIdentity);
   const reset = useRoomStore((s) => s.reset);
 
+  const normalizedRoomId = normalizeRoomId(roomId);
   const [name, setName] = useState(generateGuestName());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const guestName = name.trim();
+    if (!guestName) return;
 
     setLoading(true);
     setError('');
+
     try {
-      // Clear any stale host session before joining as guest
-      reset();
-      const res = await api.joinRoom(roomId, name.trim());
+      const state = useRoomStore.getState();
+      if (
+        state.isHost ||
+        (state.roomId && normalizeRoomId(state.roomId) !== normalizedRoomId)
+      ) {
+        reset();
+      }
+
+      const res = await api.joinRoom(normalizedRoomId, guestName);
+
       setIdentity({
-        roomId,
+        roomId: normalizedRoomId,
         token: res.guestToken,
         participantId: res.participantId,
         isHost: false,
-        displayName: name.trim(),
+        displayName: guestName,
       });
-      useRoomStore.getState().setSessionStatus('waiting');
-      useRoomStore.getState().setConnectionStatus('connecting');
-      router.replace(`/room/${roomId}`);
+
+      router.replace(`/room/${normalizedRoomId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to join room');
     } finally {
@@ -59,7 +68,7 @@ export function GuestJoinPrompt({ roomId }: { roomId: string }) {
           <Logo />
           <h1 className="text-2xl font-bold mt-6 mb-1 text-white">Join mauknh.diaries</h1>
           <p className="text-white/50 text-sm">
-            Room <span className="text-primary font-mono">{roomId}</span>
+            Room <span className="text-primary font-mono">{normalizedRoomId}</span>
           </p>
         </div>
 
@@ -77,7 +86,7 @@ export function GuestJoinPrompt({ roomId }: { roomId: string }) {
                 autoFocus
               />
               {error && <p className="text-sm text-danger">{error}</p>}
-              <Button type="submit" className="w-full" size="lg">
+              <Button type="submit" className="w-full" size="lg" loading={loading}>
                 Join Room
               </Button>
             </form>

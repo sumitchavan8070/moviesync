@@ -3,11 +3,12 @@ import { authenticateRoomToken } from '../api/auth';
 import { apiError, json } from '../api/response';
 import { roomService } from '../services/room.service';
 import { streamRelayService } from '../services/stream-relay.service';
-import { parseRangeHeader } from '../utils/index';
+import { parseRangeHeader, normalizeRoomId } from '../utils/index';
 
 const MAX_CHUNK_BYTES = 512 * 1024;
 
 export function handleStreamMetadata(roomId: string, request: Request): Response {
+  const id = normalizeRoomId(roomId);
   const ip = getClientIp(request);
   if (!rateLimit(`stream:${ip}`, 2000, 60_000)) {
     return apiError('Stream rate limit exceeded', 429);
@@ -16,7 +17,7 @@ export function handleStreamMetadata(roomId: string, request: Request): Response
   const auth = authenticateRoomToken(request);
   if (auth instanceof Response) return auth;
 
-  const room = roomService.getRoom(roomId);
+  const room = roomService.getRoom(id);
   if (!room) {
     return apiError('Room not found', 404);
   }
@@ -32,6 +33,7 @@ export function handleStreamMetadata(roomId: string, request: Request): Response
 }
 
 export async function handleStreamVideo(roomId: string, request: Request): Promise<Response> {
+  const id = normalizeRoomId(roomId);
   const ip = getClientIp(request);
   if (!rateLimit(`stream:${ip}`, 2000, 60_000)) {
     return apiError('Stream rate limit exceeded', 429);
@@ -40,7 +42,7 @@ export async function handleStreamVideo(roomId: string, request: Request): Promi
   const auth = authenticateRoomToken(request);
   if (auth instanceof Response) return auth;
 
-  const room = roomService.getRoom(roomId);
+  const room = roomService.getRoom(id);
   if (!room) {
     return apiError('Room not found', 404);
   }
@@ -72,7 +74,7 @@ export async function handleStreamVideo(roomId: string, request: Request): Promi
           try {
             while (offset < size) {
               const end = Math.min(offset + MAX_CHUNK_BYTES - 1, size - 1);
-              const chunk = await streamRelayService.createChunkRequest(roomId, offset, end);
+              const chunk = await streamRelayService.createChunkRequest(id, offset, end);
               offset = end + 1;
               controller.enqueue(new Uint8Array(chunk));
             }
@@ -98,7 +100,7 @@ export async function handleStreamVideo(roomId: string, request: Request): Promi
     }
     const contentLength = end - start + 1;
 
-    const chunk = await streamRelayService.createChunkRequest(roomId, start, end);
+    const chunk = await streamRelayService.createChunkRequest(id, start, end);
 
     return new Response(new Uint8Array(chunk), {
       status: 206,

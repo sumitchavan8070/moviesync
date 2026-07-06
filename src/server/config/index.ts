@@ -19,15 +19,27 @@ function envInt(key: string, fallback: number): number {
   return parsed;
 }
 
+function buildCorsOrigins(): string[] {
+  const origins = new Set<string>();
+
+  for (const origin of (process.env.CORS_ORIGINS ?? 'http://localhost:3000').split(',')) {
+    const trimmed = origin.trim();
+    if (trimmed) origins.add(trimmed);
+  }
+
+  if (process.env.CLIENT_URL) origins.add(process.env.CLIENT_URL.trim());
+  if (process.env.VERCEL_URL) origins.add(`https://${process.env.VERCEL_URL.trim()}`);
+  if (process.env.NEXT_PUBLIC_APP_URL) origins.add(process.env.NEXT_PUBLIC_APP_URL.trim());
+
+  return [...origins];
+}
+
 export const config = {
   nodeEnv: env('NODE_ENV', 'development'),
   port: envInt('PORT', 3000),
   host: env('HOST', '0.0.0.0'),
   clientUrl: env('CLIENT_URL', 'http://localhost:3000'),
-  corsOrigins: env('CORS_ORIGINS', 'http://localhost:3000')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean),
+  corsOrigins: buildCorsOrigins(),
   jwtSecret: env('JWT_SECRET', 'dev-jwt-secret-change-in-production'),
   roomTokenSecret: env('ROOM_TOKEN_SECRET', 'dev-room-token-secret'),
   sessionExpiryHours: envInt('SESSION_EXPIRY_HOURS', 24),

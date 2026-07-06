@@ -16,7 +16,7 @@ import type {
   SyncResponsePayload,
   TypingPayload,
 } from '../types/index';
-import { sanitizeChatContent } from '../utils/index';
+import { sanitizeChatContent, normalizeRoomId } from '../utils/index';
 
 interface AuthenticatedSocket extends Socket {
   roomId?: string;
@@ -59,7 +59,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
       return;
     }
 
-    const room = roomService.getRoom(payload.roomId);
+    const room = roomService.getRoom(normalizeRoomId(payload.roomId));
     if (!room) {
       next(new Error('Room not found'));
       return;
@@ -70,7 +70,7 @@ export function setupSocketIO(httpServer: HttpServer): Server {
       return;
     }
 
-    socket.roomId = payload.roomId;
+    socket.roomId = normalizeRoomId(payload.roomId);
     socket.participantId = payload.participantId;
     socket.isHost = payload.isHost;
     next();

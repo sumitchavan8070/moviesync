@@ -4,7 +4,7 @@ import type {
   RoomPublicInfo,
   StreamMetadata,
 } from '@/types';
-import { getApiUrl } from '@/utils';
+import { getApiUrl, normalizeRoomId } from '@/utils';
 
 class ApiError extends Error {
   constructor(
@@ -28,7 +28,11 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new ApiError(data.error || `Request failed (${res.status})`, res.status);
+    const message =
+      typeof data.error === 'string'
+        ? data.error
+        : `Request failed (${res.status})`;
+    throw new ApiError(message, res.status);
   }
 
   return data as T;
@@ -40,7 +44,7 @@ export const api = {
   createRoom: (hostName: string) =>
     request<CreateRoomResponse>(getApiUrl('/rooms'), {
       method: 'POST',
-      body: JSON.stringify({ hostName }),
+      body: JSON.stringify({ hostName: hostName.trim() }),
     }),
 
   getRoom: (roomId: string) =>
@@ -55,18 +59,24 @@ export const api = {
         isSpeaking: boolean;
         online: boolean;
       }>;
-    }>(getApiUrl(`/rooms/${roomId}`)),
+    }>(getApiUrl(`/rooms/${encodeURIComponent(normalizeRoomId(roomId))}`)),
 
   joinRoom: (roomId: string, name: string, token?: string) =>
-    request<JoinRoomResponse>(getApiUrl(`/rooms/${roomId}/join`), {
-      method: 'POST',
-      body: JSON.stringify({ name, token }),
-    }),
+    request<JoinRoomResponse>(
+      getApiUrl(`/rooms/${encodeURIComponent(normalizeRoomId(roomId))}/join`),
+      {
+        method: 'POST',
+        body: JSON.stringify({ name: name.trim(), token }),
+      },
+    ),
 
   getStreamMetadata: (roomId: string, token: string) =>
-    request<StreamMetadata & { acceptRanges: boolean }>(getApiUrl(`/stream/${roomId}/metadata`), {
-      headers: { Authorization: `Bearer ${token}` },
-    }),
+    request<StreamMetadata & { acceptRanges: boolean }>(
+      getApiUrl(`/stream/${encodeURIComponent(normalizeRoomId(roomId))}/metadata`),
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    ),
 };
 
 export { ApiError };

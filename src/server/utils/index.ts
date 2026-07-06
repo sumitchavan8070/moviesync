@@ -1,10 +1,7 @@
 import { customAlphabet } from 'nanoid';
 
-/** URL-safe room IDs — 8 chars, ~47 bits entropy */
-const generateRoomId = customAlphabet(
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-  8,
-);
+/** URL-safe room IDs — 8 lowercase chars for easy sharing */
+const generateRoomId = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 8);
 
 const generateToken = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
@@ -69,6 +66,10 @@ export function sanitizeDisplayName(name: string): string {
 
 export function sanitizeChatContent(content: string): string {
   return content.trim().slice(0, 2000);
+}
+
+export function normalizeRoomId(roomId: string): string {
+  return roomId.trim().toLowerCase();
 }
 
 export function defaultPlaybackState(): import('../types/index').PlaybackState {

@@ -12,6 +12,7 @@ import {
   createRoomId,
   createSecureToken,
   defaultPlaybackState,
+  normalizeRoomId,
   sanitizeDisplayName,
 } from '../utils/index';
 import { authService } from './auth.service';
@@ -63,7 +64,8 @@ export class RoomService {
   }
 
   getRoom(roomId: string): Room | undefined {
-    const room = this.rooms.get(roomId);
+    const id = normalizeRoomId(roomId);
+    const room = this.rooms.get(id);
     if (!room) return undefined;
     if (Date.now() > room.expiresAt) {
       this.rooms.delete(roomId);
@@ -95,7 +97,8 @@ export class RoomService {
     name: string,
     participantId?: string,
   ): { room: Room; participant: Participant; guestToken: string } | null {
-    const room = this.getRoom(roomId);
+    const normalizedRoomId = normalizeRoomId(roomId);
+    const room = this.getRoom(normalizedRoomId);
     if (!room) return null;
     if (room.locked) return null;
 
@@ -106,15 +109,15 @@ export class RoomService {
         return {
           room,
           participant: existing,
-          guestToken: authService.signGuestToken(roomId, participantId),
+          guestToken: authService.signGuestToken(normalizedRoomId, participantId),
         };
       }
     }
 
-    const id = createSecureToken();
+    const newParticipantId = createSecureToken();
     const now = Date.now();
     const participant: Participant = {
-      id,
+      id: newParticipantId,
       socketId: '',
       name: sanitizeDisplayName(name) || 'Guest',
       isHost: false,
@@ -125,8 +128,8 @@ export class RoomService {
       lastSeenAt: now,
     };
 
-    room.participants.set(id, participant);
-    const guestToken = authService.signGuestToken(roomId, id);
+    room.participants.set(newParticipantId, participant);
+    const guestToken = authService.signGuestToken(normalizedRoomId, newParticipantId);
     return { room, participant, guestToken };
   }
 
