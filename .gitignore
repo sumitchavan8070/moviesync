@@ -3,8 +3,8 @@ node_modules/
 
 # Build outputs
 dist/
+dist-server/
 build/
-server/dist/
 *.tsbuildinfo
 
 # Environment & secrets
@@ -19,11 +19,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-server/logs/
+logs/
 
 # Vite
 .vite/
-client/.vite/
 
 # Test coverage
 coverage/

@@ -1,9 +1,8 @@
 module.exports = {
   apps: [
     {
-      name: 'mauknh-diaries-server',
-      script: './dist/index.js',
-      cwd: './server',
+      name: 'mauknh-diaries',
+      script: './dist-server/index.js',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,

@@ -45,7 +45,7 @@ export function createApp(): express.Application {
 
   // Serve frontend in production (single-container deployment)
   if (config.isProduction) {
-    const clientDist = path.resolve(__dirname, '../../dist');
+    const clientDist = path.resolve(__dirname, '../dist');
     app.use(express.static(clientDist));
     app.get(/^(?!\/api).*/, (_req, res) => {
       res.sendFile(path.join(clientDist, 'index.html'));

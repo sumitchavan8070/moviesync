@@ -1,4 +1,4 @@
-# Multi-stage production build for mauknh.diaries
+# Production build for mauknh.diaries
 
 FROM node:20-alpine AS build
 WORKDIR /app
@@ -6,8 +6,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY client/ ./client/
-COPY server/ ./server/
+COPY index.html vite.config.ts tsconfig.json tsconfig.server.json ./
+COPY public ./public
+COPY src ./src
 
 ARG VITE_API_URL=
 ARG VITE_WS_URL=
@@ -24,9 +25,9 @@ RUN apk add --no-cache tini
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY --from=build /app/server/dist ./server/dist
+COPY --from=build /app/dist-server ./dist-server
 COPY --from=build /app/dist ./dist
-COPY server/ecosystem.config.cjs ./server/
+COPY ecosystem.config.cjs ./
 
 ENV NODE_ENV=production
 ENV PORT=3001
@@ -37,4 +38,4 @@ EXPOSE 3001
 USER node
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "server/dist/index.js"]
+CMD ["node", "dist-server/index.js"]
