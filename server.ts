@@ -9,7 +9,7 @@ import { setupSocketIO } from './src/server/socket/index.js';
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev, dir: '.' });
 const handle = nextApp.getRequestHandler();
-const apiApp = createApp({ serveFrontend: false });
+const apiApp = createApp();
 
 async function main() {
   await nextApp.prepare();

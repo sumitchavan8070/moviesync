@@ -2,17 +2,12 @@ import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { config } from './config/index.js';
 import { errorHandler } from './middleware/auth.middleware.js';
 import { globalRateLimiter } from './middleware/rate-limit.middleware.js';
 import routes from './routes/index.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-export function createApp(options: { serveFrontend?: boolean } = {}): express.Application {
-  const { serveFrontend = false } = options;
+export function createApp(): express.Application {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -43,15 +38,6 @@ export function createApp(options: { serveFrontend?: boolean } = {}): express.Ap
   app.use(globalRateLimiter);
 
   app.use('/api', routes);
-
-  // Serve static frontend when running API-only (Docker without Next custom server)
-  if (serveFrontend && config.isProduction) {
-    const clientDist = path.resolve(__dirname, '../dist');
-    app.use(express.static(clientDist));
-    app.get(/^(?!\/api).*/, (_req, res) => {
-      res.sendFile(path.join(clientDist, 'index.html'));
-    });
-  }
 
   app.use(errorHandler);
 
